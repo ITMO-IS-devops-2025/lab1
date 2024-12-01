@@ -1,0 +1,4 @@
+- name: Start django app on web servers
+  hosts: app
+  tasks:
+    - name: 
