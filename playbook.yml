@@ -2,19 +2,12 @@
   hosts: app
   become: true
   tasks:
-    - name: Create user "app"
-      ansible.builtin.user:
-        name: app
-        state: present
-        create_home: true
-
     - name: Install required system packages for Docker installation
       ansible.builtin.apt:
         pkg:
           - ca-certificates
           - curl
-        state: latest
-        only_upgrade: true
+        state: present
 
     - name: Add Docker GPG apt key
       ansible.builtin.apt_key:
@@ -29,50 +22,17 @@
     - name: Install docker-ce
       ansible.builtin.apt:
         name: docker-ce
-        state: latest
-        only_upgrade: true
+        state: present
 
-    - name: Install required system packages for django app
-      ansible.builtin.apt:
-        pkg:
-          - python3-pip
-          - virtualenv
-        state: latest
-        only_upgrade: true
+    - name: Remove existing django app container
+      community.docker.docker_container:
+        name: app
+        state: absent
 
-    - name: Clone django app repository # noqa: latest
-      ansible.builtin.git:
-        repo: https://github.com/mdn/django-locallibrary-tutorial
-        dest: /home/app
-        version: "HEAD"
-
-    - name: Create virtualenv and install requirements for django app
-      ansible.builtin.pip:
-        requirements: /home/app/django-locallibrary-tutorial/requirements.txt
-        virtualenv: /home/app/django-locallibrary-tutorial/venv
-
-    - name: Make django app migrations
-      ansible.builtin.command: python3 manage.py makemigrations
-      changed_when: true
-      args:
-        chdir: /home/app/django-locallibrary-tutorial
-
-    - name: Migrate django app
-      ansible.builtin.command: python3 manage.py migrate
-      changed_when: true
-
-    - name: Collect static for django app
-      ansible.builtin.command: python3 manage.py collectstatic
-      changed_when: true
-
-    - name: Test django app
-      ansible.builtin.command: python3 manage.py test
-      changed_when: true
-
-    - name: Create django app superuser
-      ansible.builtin.command: python3 manage.py createsuperuser
-      changed_when: true
-
-    - name: Start django app
-      ansible.builtin.command: python3 manage.py runserver
-      changed_when: true
+    - name: Start django app container
+      community.docker.docker_container:
+        name: app
+        image: timurbabs/django
+        state: started
+        ports:
+          - 8000:8000
