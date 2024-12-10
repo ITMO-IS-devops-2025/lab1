@@ -1,0 +1,38 @@
+- name: Start django app on web servers
+  hosts: app
+  become: true
+  tasks:
+    - name: Install required system packages for Docker installation
+      ansible.builtin.apt:
+        pkg:
+          - ca-certificates
+          - curl
+        state: present
+
+    - name: Add Docker GPG apt key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker apt repository
+      ansible.builtin.apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Install docker-ce
+      ansible.builtin.apt:
+        name: docker-ce
+        state: present
+
+    - name: Remove existing django app container
+      community.docker.docker_container:
+        name: app
+        state: absent
+
+    - name: Start django app container
+      community.docker.docker_container:
+        name: app
+        image: timurbabs/django
+        state: started
+        ports:
+          - 8000:8000
